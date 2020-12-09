@@ -6,6 +6,7 @@
           :is="'form-' + field.component"
           :errors="errors"
           :resource-name="resourceName"
+          :resource-id="resourceId"
           :field="field"
           :via-resource="viaResource"
           :via-resource-id="viaResourceId"
@@ -33,6 +34,7 @@
       >
         <div :class="{'px-6 py-3':!tab.listable}">
           <component
+            ref="fields"
             v-for="(field, index) in tab.fields"
             :class="{'remove-bottom-border': index == tab.fields.length - 1}"
             :key="'tab-' + index"
@@ -46,6 +48,7 @@
             :via-resource-id="viaResourceId"
             :via-relationship="viaRelationship"
             @actionExecuted="actionExecuted"
+            :show-help-text="field.helpText != null"
           />
         </div>
       </div>
@@ -59,6 +62,8 @@ import {
   HandlesValidationErrors,
   InteractsWithResourceInformation
 } from "laravel-nova";
+
+import {changeActiveTab} from '../util/tab-updater'
 
 export default {
   mixins: [
@@ -118,7 +123,9 @@ export default {
       tabs[field.tab].fields.push(field);
     });
     this.tabs = tabs;
-    this.handleTabClick(tabs[Object.keys(tabs)[0]]);
+    this.handleTabClick({
+        name: this.$route.query.tab || tabs[Object.keys(tabs)[0]].name
+    });
   },
   methods: {
     /**
@@ -136,7 +143,16 @@ export default {
       this.$emit("actionExecuted");
     },
     handleTabClick(tab, event) {
+      let cur = this.$router.currentRoute.query;
       this.activeTab = tab.name;
+
+      if(!cur || cur.tab != tab.name) {
+        changeActiveTab(this.$router, tab.name);
+      }
+
+      // When code fields are not visible initially they are not loaded
+      // See https://stackoverflow.com/questions/8349571/codemirror-editor-is-not-loading-content-until-clicked
+      setTimeout(this.refreshCodeFields, 1);
     },
 
     tabHasErrors(tab) {
@@ -152,7 +168,13 @@ export default {
       tab.hasErrors = hasErrors;
 
       return hasErrors;
-    }
+    },
+
+    refreshCodeFields() {
+      this.$refs.fields
+        .filter(field => 'codemirror' in field)
+        .forEach(field => field.codemirror.refresh());
+    },
   }
 };
 </script>
