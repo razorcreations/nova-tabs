@@ -163,9 +163,6 @@ export default {
   .card {
     box-shadow: none;
   }
-  h1 {
-    display: none;
-  }
   .tab {
     padding-top: 1.25rem;
     padding-bottom: 1.25rem;
